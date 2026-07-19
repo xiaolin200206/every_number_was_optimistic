@@ -1,0 +1,4 @@
+trial,lat_mean,lat_med,lat_p95,lat_max,l2d_cache,l2d_cache_refill,l3d_cache,ll_cache_miss_rd,peak_temp,throttle_bits,p_idle_w,p_active_w,energy_j,energy_per_img_j,n_pwr,vbat_start_v,vbat_mean_v,vbat_end_v,ibat_mean_a,soc_start_pct,soc_end_pct,vbus_mw_max,on_battery,governor,cores,ort_threads,ort_version
+1,371.07151703332494,369.2060365001453,379.0967066498865,382.26725999993505,10602082742,354919605,3696825154,896995608,54.125,0,,,,,,,,,,,,,,jetson_clocks@1344000/schedutil,all,4,1.23.0
+2,369.3328108166724,368.7101560001338,371.993330050077,375.0368769999568,10609992405,361326996,3877981843,894120023,54.937,0,,,,,,,,,,,,,,jetson_clocks@1344000/schedutil,all,4,1.23.0
+3,368.2928825833187,368.1920205000324,369.5942932500202,370.64375399995697,10611749857,346091401,3706429416,885816325,55.812,0,,,,,,,,,,,,,,jetson_clocks@1344000/schedutil,all,4,1.23.0
