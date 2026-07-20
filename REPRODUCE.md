@@ -36,11 +36,13 @@ Parse only the first 14 columns, or use a custom reader.
 ## Table II — Iso-FLOP pairs (Platform A)
 
 **Data files:**
-- Pair A: `yolo11x_n50.csv` (196.0 GFLOPs) vs `yolo11m_1088.csv` (196.5 GFLOPs)
+- Pair A: `yolo11x_n50.csv` (194.9 GFLOPs) vs `yolo11m_1088.csv` (196.5 GFLOPs)
 - Pair B: `yolo11s_fp32.csv` (21.5 GFLOPs) vs `yolo11n_1152.csv` (21.1 GFLOPs)
 
-**Computation:** same as Table I. GFLOPs are from the YOLO11 model cards
-(resolution-scaled: GFLOPs × (new_res / 640)²).
+**Computation:** same as Table I. GFLOPs are the fused-graph values
+(6.5 / 21.5 / 68.0 / 86.9 / 194.9) and match the Ultralytics YOLO11 model
+cards; `thop` on the fused models and the deployed ONNX exports reproduce
+them. Resolution-scaled as GFLOPs × (new_res / 640)².
 
 ---
 
@@ -80,7 +82,8 @@ Parse only the first 14 columns, or use a custom reader.
 **Computation:**
 - LLC/img as above
 - Traffic difference: `(LLC_one − LLC_two) / LLC_two × 100` = **−6.3%**
-- Statistical test: two-sample t-test, `p ≈ 0`, Cohen's d = −7.66
+- Statistical test: two-sample t-test, `p = 4.7e-6`; Cohen's d = −6.85
+  (pooled sample SD, ddof=1, n = 5 per group)
 
 ---
 
@@ -93,7 +96,8 @@ Parse only the first 14 columns, or use a custom reader.
 - Active power: `mean(p_active_w)`
 - Idle power: `mean(p_idle_w)`
 - Energy/image: `mean(energy_per_img_j)`
-- Peak temp: `max(peak_temp)`
+- Peak temp: `mean(peak_temp)` — the mean of per-trial peak die temperatures
+  (the table column is footnoted accordingly in the paper)
 
 **Replication check** (thread sweep vs power sweep, same configuration):
 - Compare `yolo11m_t1.csv` vs `yolo11m_pwr_t1.csv`: latency agrees to 0.008%
@@ -116,32 +120,33 @@ Parse only the first 14 columns, or use a custom reader.
 
 All figures are generated from the data above. The exact values used:
 
-### Fig. 1 — FLOPs vs. latency / LLC vs. latency
+### Fig. 1 — FLOPs vs. latency / LLC vs. latency (`fig1_flops_vs_latency.png`)
 Source: Table I data. Two panels: (a) GFLOPs on x-axis, (b) LLC/img on x-axis.
 
-### Fig. 2 — Thread sweep comparison (three panels)
-Source: Tables III and IV. (a) Speedup, (b) normalised DRAM traffic, (c) efficiency.
-
-### Fig. 3 — Core-pinning experiment
-Source: Table V. Bar charts of LLC/img and latency for three configurations.
-
-### Fig. 4 — Power and energy (three panels)
-Source: Table VII. (a) Active power with published range shaded, (b) energy/image,
-(c) peak temperature.
-
-### Fig. 5 — Effective bandwidth
+### Fig. 2 — Effective bandwidth (`fig2_bandwidth.png`)
 Source: Table I. BW = (LLC/img × 64) / latency for each model on each platform.
 
-### Fig. 6 — FLOP vs LLC predictor error
+### Fig. 3 — FLOP vs weight-size vs LLC predictor error (`fig3_predictor_comparison.png`)
 Source: Table I. Through-origin fits: `lat = k × GFLOP` vs `lat = k × LLC/img`.
 Per-model percentage error shown as grouped bars.
 
-### Fig. 7 — Cross-platform traffic ratio
+### Fig. 4 — Cross-platform traffic ratio (`fig4_traffic_ratio.png`)
 Source: Table I. (a) `LLC_B / LLC_A` per model. (b) vs fraction of layers > 2 MB
-working set (from `worksets.py`).
+working set, from `data/worksets.json` (Spearman ρ = −1.0 on that data; exact
+two-sided p = 0.017, n = 5).
 
-### Fig. 8 — Amdahl serial fraction
+### Fig. 5 — Amdahl serial fraction (`fig5_amdahl.png`)
 Source: Table III. Back-solved: `s = (1/S − 1/N) / (1 − 1/N)` at N = 2, 3, 4.
+
+### Fig. 6 — Thread sweep comparison, three panels (`fig6_thread_sweep.png`)
+Source: Tables III and IV. (a) Speedup, (b) normalised DRAM traffic, (c) efficiency.
+
+### Fig. 7 — Core-pinning experiment (`fig7_core_pinning.png`)
+Source: Table V. Bar charts of LLC/img and latency for three configurations.
+
+### Fig. 8 — Power and energy, three panels (`fig8_power_energy.png`)
+Source: Table VII. (a) Active power with published range shaded, (b) energy/image,
+(c) die temperature (mean of per-trial peaks).
 
 ---
 

@@ -146,7 +146,13 @@ def main():
     v1 = df_one["ll_cache_miss_rd"].values / N_B
     v2 = df_two["ll_cache_miss_rd"].values / N_B
     _, pval = stats.ttest_ind(v1, v2)
-    print(f"  → t-test p-value: {pval:.2e} (paper: ≈ 0)")
+    print(f"  → t-test p-value: {pval:.2e} (paper: 4.7e-6)")
+    sp_pool = np.sqrt(((len(v1) - 1) * v1.std(ddof=1) ** 2
+                       + (len(v2) - 1) * v2.std(ddof=1) ** 2)
+                      / (len(v1) + len(v2) - 2))
+    cohen_d = (v1.mean() - v2.mean()) / sp_pool
+    r = check("Cohen's d (pooled sample SD)", cohen_d, -6.85, tol_pct=1.0)
+    passed += r; total += 1
 
     # ============================================================
     section("TABLE VII: Power sweep, Platform A")
@@ -173,7 +179,7 @@ def main():
     # ============================================================
     section("LLC-MISS PREDICTOR (Section III-C)")
     # ============================================================
-    gflops = np.array([6.5, 21.5, 68.0, 87.6, 196.0])
+    gflops = np.array([6.5, 21.5, 68.0, 86.9, 194.9])
     lat_a = np.array([139.0, 353.4, 963.6, 1229.4, 2475.1])
     llc_a = np.array([6.20, 15.66, 46.25, 56.27, 124.48])
 
@@ -182,9 +188,41 @@ def main():
     k_llc = np.sum(llc_a * lat_a) / np.sum(llc_a ** 2)
     err_llc = np.max(np.abs(k_llc * llc_a - lat_a) / lat_a * 100)
 
-    r1 = check("FLOP predictor max error (%)", err_flop, 39.1)
+    r1 = check("FLOP predictor max error (%)", err_flop, 38.8)
     r2 = check("LLC predictor max error (%)", err_llc, 10.0)
     passed += r1 + r2; total += 2
+
+    # ============================================================
+    section("TABLE VII: mean of per-trial peak temperatures")
+    # ============================================================
+    expected_temp = {1: 57.3, 2: 64.5, 3: 70.7, 4: 74.3}
+    for t in [1, 2, 3, 4]:
+        df = pd.read_csv(os.path.join(DIR_A, f"yolo11m_pwr_t{t}.csv"))
+        r = check(f"t={t} mean peak temp (°C)", df["peak_temp"].mean(),
+                  expected_temp[t], tol_pct=1.0)
+        passed += r; total += 1
+
+    # ============================================================
+    section("FIG. 4b: traffic ratio vs working-set fraction (worksets.json)")
+    # ============================================================
+    import json
+    ws = json.load(open(os.path.join(os.path.dirname(__file__),
+                                     "data", "worksets.json")))
+    models_pairs = [("n", "yolo11n_fp32", "cachebench_jetson_11n"),
+                    ("s", "yolo11s_fp32", "cachebench_jetson_11s"),
+                    ("m", "yolo11m_fp32", "cachebench_jetson_11m"),
+                    ("l", "yolo11l_fp32", "cachebench_jetson_11l"),
+                    ("x", "yolo11x_n50", "cachebench_jetson_11x")]
+    ratios, fracs = [], []
+    for m, fa, fb in models_pairs:
+        la = pd.read_csv(os.path.join(DIR_A, f"{fa}.csv"))["ll_cache_miss_rd"].mean() / N_A
+        lb = read_b(os.path.join(DIR_B, f"{fb}.csv"))["ll_cache_miss_rd"].mean() / N_B
+        ratios.append(lb / la)
+        fracs.append(ws[f"yolo11{m}"]["frac_layers_over_L3"])
+    rho, _ = stats.spearmanr(ratios, fracs)
+    r = check("Spearman rho (ratio vs fraction)", rho, -1.0, tol_pct=0.5)
+    passed += r; total += 1
+    print("  → exact two-sided p for |rho|=1, n=5: 2/120 = 0.017")
 
     # ============================================================
     section("REPLICATION CHECK: thread sweep vs power sweep")

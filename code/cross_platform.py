@@ -54,7 +54,7 @@ def main():
     ap.add_argument('--jetson-dir', default='.', help='Directory with Jetson CSVs')
     a = ap.parse_args()
 
-    MODELS = [('n', 6.5), ('s', 21.5), ('m', 68.0), ('l', 87.6), ('x', 196.0)]
+    MODELS = [('n', 6.5), ('s', 21.5), ('m', 68.0), ('l', 86.9), ('x', 194.9)]
     PI_FILES = {'n': 'yolo11n_fp32.csv', 's': 'yolo11s_fp32.csv',
                 'm': 'yolo11m_fp32.csv', 'l': 'yolo11l_fp32.csv',
                 'x': 'yolo11x_n50.csv'}

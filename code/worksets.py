@@ -12,7 +12,7 @@ FP32 = 4
 
 MEASURED = {  # 实测 LLC 缺失/图 × 64 B = MB/图
     'yolo11n': 397, 'yolo11s': 1002, 'yolo11m': 2960,
-    'yolo11l': 3601, 'yolo11x': 8381,
+    'yolo11l': 3601, 'yolo11x': 7967,
 }
 
 def numel(shape):

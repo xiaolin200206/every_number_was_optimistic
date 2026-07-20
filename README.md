@@ -15,7 +15,7 @@ were each optimistic on a battery-powered durian-orchard inspection node.
 
 | Proxy | Expected | Measured | Gap |
 |---|---|---|---|
-| FLOPs → latency | Proportional | Up to 39.1% error | LLC-miss predictor: 10.0% max error |
+| FLOPs → latency | Proportional | Up to 38.8% error | LLC-miss predictor: 10.0% max error |
 | Published board power | 6.8–8.8 W | 12.34 W at battery | 1.40–1.81× |
 | INT8 quantisation | Faster | 1.87× slower | No int8 conv kernel on ARM |
 | Energy minimum | 4 threads | 3 threads | 4th core is a net energy loss |
@@ -43,8 +43,9 @@ platforms), analysis scripts, verification scripts, and figures.
 **Not released:** The 299 durian field images used as inference input. These
 images are proprietary and form part of a commercial crop-monitoring product.
 The images are not required to verify any claim in the paper — every reported
-number is reproduced from the released CSVs by `verify_tables.py` (38/38
-checks pass). Researchers wishing to run the measurement harness on their own
+number derived from the inference measurements is reproduced from the released
+CSVs by `verify_tables.py` (44/44 checks pass); the streaming-copy bandwidth
+quoted in Section IV-A comes from a separate memory microbenchmark. Researchers wishing to run the measurement harness on their own
 hardware may substitute any image dataset of equivalent size.
 
 ## Repository structure
@@ -53,6 +54,7 @@ hardware may substitute any image dataset of equivalent size.
 .
 ├── README.md                          # this file
 ├── REPRODUCE.md                       # step-by-step: every table & figure
+├── verify_tables.py                   # reproduces every key number (run from repo root)
 │
 ├── code/
 │   ├── cache_benchmark_pi.py          # measurement harness, Platform A (RPi5)
@@ -62,6 +64,7 @@ hardware may substitute any image dataset of equivalent size.
 │   ├── cross_platform.py              # cross-platform comparison analysis
 │   ├── worksets.py                    # per-layer working sets from ONNX graphs
 │   ├── export_models.py              # export YOLO11 .pt → .onnx
+│   ├── make_figs.py                  # regenerate Figs. 1, 3, 4 from data/
 │   ├── quantize.py                   # dynamic INT8 quantisation
 │   └── probe.py                      # lightweight contention/sharing probe
 │
@@ -102,13 +105,13 @@ hardware may substitute any image dataset of equivalent size.
 │
 └── figures/                           # generated from data/
     ├── fig1_flops_vs_latency.png
-    ├── fig2_thread_sweep.png
-    ├── fig3_core_pinning.png
-    ├── fig4_power_energy.png
-    ├── fig5_bandwidth.png
-    ├── fig6_predictor_comparison.png
-    ├── fig7_traffic_ratio.png
-    └── fig8_amdahl.png
+    ├── fig2_bandwidth.png
+    ├── fig3_predictor_comparison.png
+    ├── fig4_traffic_ratio.png
+    ├── fig5_amdahl.png
+    ├── fig6_thread_sweep.png
+    ├── fig7_core_pinning.png
+    └── fig8_power_energy.png
 ```
 
 ## Platforms
@@ -122,7 +125,7 @@ hardware may substitute any image dataset of equivalent size.
 | L3 | 1× 2 MB shared | 2× 2 MB independent blocks |
 | DRAM | LPDDR4X-4267 | LPDDR5-3199 |
 | UPS | Waveshare UPS HAT (E) | Waveshare UPS Module (C) |
-| Power sensor | INA219 via I2C @ 0x2D | INA219 via I2C @ 0x2D |
+| Power sensor | UPS HAT (E) power-gauge MCU via I2C @ 0x2D | — (battery supply only; power not logged) |
 | ORT version | 1.27.0 | 1.23.0 |
 
 Both platforms use ONNX Runtime with `CPUExecutionProvider` only (no GPU, no
@@ -139,7 +142,10 @@ measurement harness.
 # Install dependencies
 pip install pandas scipy matplotlib
 
-# Verify every number in the paper
+# Verify every key number in the paper
+python3 verify_tables.py
+
+# Aggregate the CSVs into the summary tables
 python3 code/collect.py --pi-dir data/platform_a/ --jetson-dir data/platform_b/
 ```
 
@@ -157,14 +163,14 @@ done
 python3 code/cache_benchmark_pi.py \
     --mode combined --combined yolo11s.onnx \
     --imgs imgs/ --size 640 --threads 4 \
-    --trials 5 --n 50 --tag yolo11s_fp32
+    --trials 3 --n 50 --tag yolo11s_fp32
 
 # Thread sweep
 for t in 1 2 3 4; do
     python3 code/cache_benchmark_pi.py \
         --mode combined --combined yolo11m.onnx \
         --imgs imgs/ --size 640 --threads $t \
-        --trials 5 --n 50 --tag yolo11m_t${t}
+        --trials 3 --n 50 --tag yolo11m_t${t}
 done
 
 # Power sweep (unplug Type-C first!)
@@ -172,7 +178,7 @@ for t in 1 2 3 4; do
     python3 code/cache_benchmark_pi.py \
         --mode combined --combined yolo11m.onnx \
         --imgs imgs/ --size 640 --threads $t \
-        --trials 5 --n 50 --power --tag yolo11m_pwr_t${t}
+        --trials 3 --n 50 --power --tag yolo11m_pwr_t${t}
 done
 ```
 
@@ -228,7 +234,7 @@ Every CSV row is one trial. The columns are self-documenting:
 | `ll_cache_miss_rd` | count | Last-level cache read misses (PMU) |
 | `peak_temp` | °C | Peak die temperature during trial |
 | `throttle_bits` | bitmask | Live throttle state (0 = clean) |
-| `n_inf` | count | Total inferences in this trial |
+| `n_inf` | count | Total inferences in this trial (column present on Platform B; constant 50 on Platform A) |
 | `p_idle_w` | W | Idle board power (before trial) |
 | `p_active_w` | W | Mean board power during inference |
 | `energy_j` | J | Total energy (trapezoidal integral) |
@@ -254,6 +260,9 @@ The harness enforces the following, documented in the code comments:
 5. **Battery verification** — two independent witnesses (current < 0 AND VBUS = 0 mW)
 6. **Per-row provenance** — governor, thread count, ORT version, pack voltage,
    and SoC% are written into every CSV row
+
+Trial counts: Platform A ran 3 trials per configuration (2 for the FP32/INT8
+smoke comparison); Platform B ran 5 trials per configuration.
 
 ## Known issue in the raw data
 

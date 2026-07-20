@@ -23,8 +23,8 @@ print("\n[1] MODEL SWEEP (640, 4 threads)")
 print(f"{'model':<10}{'GFLOP':>7}{'lat ms':>11}{'sd':>7}{'LLC/img':>11}{'MB/img':>9}{'GB/s':>8}{'GF/s':>8}{'F/B':>7}{'degC':>7}")
 bw=[]
 for nm,fl,f in [('yolo11n',6.5,'yolo11n_fp32.csv'),('yolo11s',21.5,'yolo11s_fp32.csv'),
-                ('yolo11m',68.0,'yolo11m_fp32.csv'),('yolo11l',87.6,'yolo11l_fp32.csv'),
-                ('yolo11x',196.0,'yolo11x_n50.csv')]:
+                ('yolo11m',68.0,'yolo11m_fp32.csv'),('yolo11l',86.9,'yolo11l_fp32.csv'),
+                ('yolo11x',194.9,'yolo11x_n50.csv')]:
     d=agg(f)
     if not d: print(f"{nm:<10}  [missing {f}]"); continue
     mb=d['ll_img']*64/1e6; b=mb/1e3/(d['lat']/1e3); bw.append(b)
@@ -57,7 +57,7 @@ if best: print(f"  -> minimum energy at {best[0]} threads ({best[1]:.3f} J/img)"
 print("\n[4] ISO-FLOP PAIRS")
 print(f"{'pair':<5}{'config':<16}{'GFLOP':>8}{'wtMB':>8}{'lat ms':>11}{'LLC/img':>11}{'GB/s':>8}")
 got={}
-for p,nm,fl,wt,f in [('A','yolo11x @640',196.0,227.8,'yolo11x_n50.csv'),
+for p,nm,fl,wt,f in [('A','yolo11x @640',194.9,227.8,'yolo11x_n50.csv'),
                      ('A','yolo11m @1088',196.5,80.5,'yolo11m_1088.csv'),
                      ('B','yolo11s @640',21.5,37.9,'yolo11s_fp32.csv'),
                      ('B','yolo11n @1152',21.1,10.6,'yolo11n_1152.csv')]:
