@@ -35,6 +35,18 @@ A core-pinning experiment confirmed that the net direction depends on how the
 microarchitecture's replacement policy handles shared vs. private cache lines —
 not on cache size.
 
+## Data availability
+
+**Released:** All measurement code, raw CSV counter logs (29 files, both
+platforms), analysis scripts, verification scripts, and figures.
+
+**Not released:** The 299 durian field images used as inference input. These
+images are proprietary and form part of a commercial crop-monitoring product.
+The images are not required to verify any claim in the paper — every reported
+number is reproduced from the released CSVs by `verify_tables.py` (38/38
+checks pass). Researchers wishing to run the measurement harness on their own
+hardware may substitute any image dataset of equivalent size.
+
 ## Repository structure
 
 ```
@@ -48,9 +60,13 @@ not on cache size.
 │   ├── jetson_port.diff               # exact diff (worker function untouched)
 │   ├── collect.py                     # aggregate CSVs into summary tables
 │   ├── cross_platform.py              # cross-platform comparison analysis
-│   └── worksets.py                    # per-layer working sets from ONNX graphs
+│   ├── worksets.py                    # per-layer working sets from ONNX graphs
+│   ├── export_models.py              # export YOLO11 .pt → .onnx
+│   ├── quantize.py                   # dynamic INT8 quantisation
+│   └── probe.py                      # lightweight contention/sharing probe
 │
 ├── data/
+│   ├── worksets.json                  # pre-computed per-layer working set analysis
 │   ├── platform_a/                    # all Platform A (RPi5) CSVs
 │   │   ├── yolo11n_fp32.csv           # model sweep: yolo11n, 640×640, 4 threads
 │   │   ├── yolo11s_fp32.csv
