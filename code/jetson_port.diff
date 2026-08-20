@@ -1,0 +1,117 @@
+25c25
+<   * Live throttle poll: (vcgencmd get_throttled & 0xF). The low nibble is the
+---
+>   * Live throttle poll: every core's scaling_cur_freq against its own max. The
+99c99
+< deps: onnxruntime, opencv-python, numpy, smbus2   (perf and vcgencmd ship with the Pi)
+---
+> deps: onnxruntime, opencv-python, numpy      (perf: linux-tools, see PERF_BIN below)
+102a103
+> import shutil
+234a236,287
+> def _perf_ok(path):
+>     """The Debian /usr/bin/perf is a shim that resolves a directory matching the
+>        RUNNING kernel. On L4T the kernel is 5.15.x-tegra while the packaged tools
+>        install under 5.15.0-NNN, so the shim resolves to nothing and the real
+>        binary has to be located directly."""
+>     if not path:
+>         return False
+>     try:
+>         r = subprocess.run([path, '--version'], capture_output=True, text=True, timeout=10)
+>         return r.returncode == 0 and 'perf version' in r.stdout
+>     except Exception:
+>         return False
+> 
+> 
+> PERF_BIN = os.environ.get('PERF_BIN') or next(
+>     (c for c in ([shutil.which('perf')] if _perf_ok(shutil.which('perf')) else []) +
+>         sorted(glob.glob('/usr/lib/linux-tools-*/perf'), reverse=True) +
+>         sorted(glob.glob('/usr/lib/linux-tools/*/perf'), reverse=True) if c), 'perf')
+> 
+> _TEMP_PATH = None
+> 
+> 
+> def _locked_freq_khz():
+>     """The single frequency every core is pinned to, or None if they differ. Goes
+>        into the provenance column so the CSV records the operating point, not just
+>        the fact that one was fixed."""
+>     try:
+>         fs = {int(open(os.path.join(c, 'scaling_max_freq')).read())
+>               for c in glob.glob('/sys/devices/system/cpu/cpu[0-9]*/cpufreq')}
+>         return fs.pop() if len(fs) == 1 else None
+>     except Exception:
+>         return None
+> 
+> 
+> def _jetson_clocks_locked():
+>     """jetson_clocks raises scaling_min_freq to scaling_max_freq on every core.
+>        That is a stronger guarantee than a `performance` governor: the clock is
+>        pinned rather than merely biased upward, so it is accepted in its place."""
+>     try:
+>         cores = sorted(glob.glob('/sys/devices/system/cpu/cpu[0-9]*/cpufreq'))
+>         if not cores:
+>             return False
+>         for c in cores:
+>             lo = int(open(os.path.join(c, 'scaling_min_freq')).read())
+>             hi = int(open(os.path.join(c, 'scaling_max_freq')).read())
+>             if lo != hi:
+>                 return False
+>         return True
+>     except Exception:
+>         return False
+> 
+> 
+251a305,309
+>     if _jetson_clocks_locked():
+>         f = _locked_freq_khz()
+>         print(f"  clocks: jetson_clocks locked, min=max on all {len(govs)} cores"
+>               + (f" at {f/1e6:.3f} GHz" if f else "") + "  [OK]")
+>         return 'jetson_clocks@%s/%s' % (f or '?', govs[0] if govs else '?')
+264,265c322,323
+<     print("    for c in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_governor; do")
+<     print("      echo performance | sudo tee $c > /dev/null; done")
+---
+>     print("    sudo jetson_clocks          # locks min=max on every core")
+>     print("    sudo jetson_clocks --show   # verify all cores report one frequency")
+280,282c338,342
+<     """Low 16 bits of `vcgencmd get_throttled` = LIVE state.
+<        bit0 undervolt, bit1 arm freq capped, bit2 currently throttled,
+<        bit3 soft temperature limit. Bits 16-19 are sticky history: masked off."""
+---
+>     """Jetson has no vcgencmd. Once jetson_clocks has raised scaling_min_freq to
+>        scaling_max_freq the governor cannot lower the clock, so any core observed
+>        below its own maximum is being held down by the hardware. Reported in bit2
+>        (currently throttled) so the CSV column and every downstream check keep the
+>        Pi bit layout unchanged."""
+284,285c344,350
+<         out = subprocess.check_output(['vcgencmd', 'get_throttled'], text=True).strip()
+<         return int(out.split('=')[-1], 16) & 0xF
+---
+>         bits = 0
+>         for c in sorted(glob.glob('/sys/devices/system/cpu/cpu[0-9]*/cpufreq')):
+>             cur = int(open(os.path.join(c, 'scaling_cur_freq')).read())
+>             mx  = int(open(os.path.join(c, 'scaling_max_freq')).read())
+>             if cur < mx * 0.97:
+>                 bits |= 0x4
+>         return bits
+402c467
+<     cmd = ['perf', 'stat', '-e',
+---
+>     cmd = [PERF_BIN, 'stat', '-e',
+404a470,471
+>     if cfg.get('cores'):
+>         cmd = ['taskset', '-c', cfg['cores']] + cmd
+462c529
+<         'governor', 'ort_threads', 'ort_version']
+---
+>         'governor', 'cores', 'ort_threads', 'ort_version']
+484a552,554
+>     ap.add_argument('--cores', default=None,
+>                     help='pin the worker to a CPU set, e.g. 0,1 (one shared L3) or '
+>                          '0,4 (two separate L3 on Orin Nano). Passed to taskset -c.')
+503c573
+<            'threads': a.threads}
+---
+>            'threads': a.threads, 'cores': a.cores}
+550a621
+>         r['cores'] = a.cores or 'all'

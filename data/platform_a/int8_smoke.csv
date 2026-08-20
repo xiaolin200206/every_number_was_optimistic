@@ -1,0 +1,3 @@
+trial,lat_mean,lat_med,lat_p95,lat_max,l2d_cache,l2d_cache_refill,l3d_cache,ll_cache_miss_rd,peak_temp,throttle_bits,p_idle_w,p_active_w,energy_j,energy_per_img_j,n_pwr,vbat_start_v,vbat_mean_v,vbat_end_v,ibat_mean_a,soc_start_pct,soc_end_pct,vbus_mw_max,on_battery,governor,ort_threads,ort_version
+1,656.4980363500014,656.6742944999646,657.4603629000194,657.497696000064,2703858162,261559475,938897088,374205956,60.05,0,,,,,,,,,,,,,,performance,4,1.27.0
+2,657.971828549995,658.0201914999861,661.1144046500442,662.0202799999788,2702375860,261417442,928597220,375468478,61.15,0,,,,,,,,,,,,,,performance,4,1.27.0

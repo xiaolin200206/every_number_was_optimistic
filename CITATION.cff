@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software or data, please cite it using the metadata below.
+  If you are citing the findings rather than the artefact, please cite the
+  accompanying manuscript; contact the author for its current status.
+type: software
+title: >-
+  Cross-platform cache, power and endurance measurement for battery-powered
+  edge inference nodes
+abstract: >-
+  Measurement harness, raw hardware performance-counter and battery-rail power
+  logs, analysis scripts and a verification script for a study of on-node
+  neural inference running from a battery on two Arm platforms. Covers latency
+  prediction from cache traffic, parallel-scaling behaviour and its reversal
+  between microarchitectures, reduced-precision compression, and battery-rail
+  power and thermal measurement.
+authors:
+  - family-names: Shan
+    given-names: Lin Ding
+    affiliation: >-
+      Institute of Computer Science and Digital Innovation, UCSI University,
+      Kuala Lumpur, Malaysia
+    email: 1002475487@ucsiuniversity.edu.my
+    orcid: https://orcid.org/0009-0009-6031-8479
+repository-code: https://github.com/xiaolin200206/every_number_was_optimistic
+license: MIT
+keywords:
+  - edge inference
+  - performance measurement
+  - memory hierarchy
+  - cache contention
+  - Arm multicore
+  - battery-powered sensing nodes
+  - energy measurement
+  - reproducibility
